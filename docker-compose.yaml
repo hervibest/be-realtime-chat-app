@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    command: redis-server 
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - backend
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME} 
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    ports:
+      - "${DB_PORT}:5432"
+
+
+  nats:
+    image: nats:2.11.2-alpine
+    ports:
+      - "${NATS_PORT}:4222"
+      - "${NATS_MONITORING_PORT}:8222"
+    networks:
+      - backend
+    command: ["-js", "-m", "8222"]
+
+  consul:
+    image: hashicorp/consul:1.20.6
+    ports:
+      - "${CONSUL_PORT}:8500"
+    command: "agent -dev -client=0.0.0.0"
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: backend
+    driver: bridge
+
+volumes:
+  pgdata:
