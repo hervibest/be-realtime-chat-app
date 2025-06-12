@@ -1,7 +1,6 @@
 package usecase
 
 import (
-	"be-realtime-chat-app/services/chat-command-cql-svc/internal/adapter"
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/entity"
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/helper/logs"
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/model/event"
@@ -16,15 +15,12 @@ type CommandUseCase interface {
 
 type commandUseCaseImpl struct {
 	messageRepository repository.MessageRepository
-	db                repository.DB
 	log               logs.Log
 }
 
-func NewCommandUseCase(messageRepository repository.MessageRepository, db repository.DB, mesaging adapter.Messaging,
-	streaming adapter.Streaming, log logs.Log) CommandUseCase {
+func NewCommandUseCase(messageRepository repository.MessageRepository, log logs.Log) CommandUseCase {
 	return &commandUseCaseImpl{
 		messageRepository: messageRepository,
-		db:                db,
 		log:               log,
 	}
 }

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"be-realtime-chat-app/services/commoner/utils"
+
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -8,7 +10,7 @@ import (
 
 func NewKafkaProducer(config *viper.Viper, log *logrus.Logger) *kafka.Producer {
 	kafkaConfig := &kafka.ConfigMap{
-		"bootstrap.servers": config.GetString("kafka.bootstrap.servers"),
+		"bootstrap.servers": utils.GetEnv("KAFKA_BOOTSTRAP_SERVERS"),
 	}
 
 	producer, err := kafka.NewProducer(kafkaConfig)

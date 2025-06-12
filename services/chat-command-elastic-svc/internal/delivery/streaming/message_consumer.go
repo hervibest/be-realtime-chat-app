@@ -1,9 +1,10 @@
-package messaging
+package consumer
 
 import (
 	"be-realtime-chat-app/services/chat-command-elastic-svc/internal/helper/logs"
 	"be-realtime-chat-app/services/chat-command-elastic-svc/internal/model/event"
 	"be-realtime-chat-app/services/chat-command-elastic-svc/internal/usecase"
+	"context"
 
 	"github.com/bytedance/sonic"
 	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
@@ -30,6 +31,11 @@ func (c messageConsumerImpl) Consume(message *kafka.Message) error {
 	MessageEvent := new(event.Message)
 	if err := sonic.ConfigFastest.Unmarshal(message.Value, MessageEvent); err != nil {
 		c.log.Warn("error unmarshalling Message event", zap.Error(err), zap.String("message", string(message.Value)))
+		return err
+	}
+
+	if err := c.commandAsyncUseCase.Persist(context.TODO(), MessageEvent); err != nil {
+		c.log.Error("error persisting Message event", zap.Error(err), zap.String("message", string(message.Value)))
 		return err
 	}
 

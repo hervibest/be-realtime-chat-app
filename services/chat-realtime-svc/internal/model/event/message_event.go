@@ -1,14 +1,17 @@
 package event
 
+import "be-realtime-chat-app/services/commoner/constant/enum"
+
 type Message struct {
-	ID        string `db:"id"`
-	UUID      string `db:"uuid"`
-	RoomID    string `db:"room_id"`
-	UserID    string `db:"user_id"`
-	Username  string `db:"username"`
-	Content   string `db:"content"`
-	CreatedAt string `db:"created_at"`
-	DeletedAt string `db:"deleted_at"`
+	ID         string              `json:"id"`
+	UUID       string              `json:"uuid"`
+	RoomID     string              `json:"room_id"`
+	RoomStatus enum.RoomStatusEnum `json:"room_status"`
+	UserID     string              `json:"user_id"`
+	Username   string              `json:"username"`
+	Content    string              `json:"content"`
+	CreatedAt  string              `json:"created_at"`
+	DeletedAt  string              `json:"deleted_at"`
 }
 
 func (e *Message) GetID() string {

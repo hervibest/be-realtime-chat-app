@@ -4,16 +4,10 @@ import (
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/entity"
 	"fmt"
 	"time"
-
-	"github.com/elastic/go-elasticsearch/v9"
-	"github.com/scylladb/gocqlx/v2"
-	"github.com/scylladb/gocqlx/v2/qb"
 )
 
 type messageRepository struct {
-	session  gocqlx.Session
-	esClient *elasticsearch.Client
-	index    string
+	session DB
 }
 
 type MessageRepository interface {
@@ -22,17 +16,25 @@ type MessageRepository interface {
 	SoftDelete(id string) error
 }
 
-func NewMessageRepository(session gocqlx.Session) MessageRepository {
+func NewMessageRepository(session DB) MessageRepository {
 	return &messageRepository{session: session}
 }
 
 func (r *messageRepository) Insert(message *entity.Message) error {
-	query := qb.Insert("messages").
-		Columns("id", "uuid", "room_id", "user_id", "username", "content", "created_at").
-		Query(r.session).
-		BindStruct(message)
+	query := `INSERT INTO messages (id, uuid, room_id, user_id, username, content, created_at) 
+	          VALUES (?, ?, ?, ?, ?, ?, ?)`
 
-	if err := query.ExecRelease(); err != nil {
+	q := r.session.Query(query,
+		message.ID,
+		message.UUID,
+		message.RoomID,
+		message.UserID,
+		message.Username,
+		message.Content,
+		message.CreatedAt,
+	)
+
+	if err := q.Exec(); err != nil {
 		return fmt.Errorf("failed to insert message: %w", err)
 	}
 	return nil
@@ -41,15 +43,28 @@ func (r *messageRepository) Insert(message *entity.Message) error {
 func (r *messageRepository) FindManyByRoomID(roomID string, limit int) (*[]*entity.Message, error) {
 	var messages []*entity.Message
 
-	query := qb.Select("messages").
-		Where(qb.Eq("room_id")).
-		Limit(uint(limit)).
-		Query(r.session).
-		BindMap(qb.M{
-			"room_id": roomID,
-		})
+	query := `SELECT id, uuid, room_id, user_id, username, content, created_at, deleted_at 
+	          FROM messages WHERE room_id = ? LIMIT ?`
 
-	if err := query.SelectRelease(&messages); err != nil {
+	iter := r.session.Query(query, roomID, limit).Iter()
+
+	var msg entity.Message
+	for iter.Scan(
+		&msg.ID,
+		&msg.UUID,
+		&msg.RoomID,
+		&msg.UserID,
+		&msg.Username,
+		&msg.Content,
+		&msg.CreatedAt,
+		&msg.DeletedAt,
+	) {
+		// Create a new copy of the message to avoid overwriting
+		m := msg
+		messages = append(messages, &m)
+	}
+
+	if err := iter.Close(); err != nil {
 		return nil, fmt.Errorf("failed to find messages by room ID: %w", err)
 	}
 
@@ -57,16 +72,11 @@ func (r *messageRepository) FindManyByRoomID(roomID string, limit int) (*[]*enti
 }
 
 func (r *messageRepository) SoftDelete(id string) error {
-	query := qb.Update("messages").
-		Set("deleted_at").
-		Where(qb.Eq("id")).
-		Query(r.session).
-		BindMap(qb.M{
-			"id":         id,
-			"deleted_at": time.Now(),
-		})
+	query := `UPDATE messages SET deleted_at = ? WHERE id = ?`
 
-	if err := query.ExecRelease(); err != nil {
+	q := r.session.Query(query, time.Now(), id)
+
+	if err := q.Exec(); err != nil {
 		return fmt.Errorf("failed to soft delete message: %w", err)
 	}
 	return nil

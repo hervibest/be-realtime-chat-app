@@ -1,6 +1,7 @@
 package config
 
 import (
+	"be-realtime-chat-app/services/commoner/utils"
 	"fmt"
 	"log"
 	"strings"
@@ -8,7 +9,13 @@ import (
 	"github.com/elastic/go-elasticsearch/v9"
 )
 
-func InitElasticsearch(addresses []string) (*elasticsearch.Client, error) {
+func NewElasticsearch() (*elasticsearch.Client, error) {
+	elasticAddres := utils.GetEnv("ELASTICSEARCH_ADDRESS")
+
+	addresses := []string{
+		elasticAddres,
+	}
+
 	cfg := elasticsearch.Config{
 		Addresses: addresses,
 	}

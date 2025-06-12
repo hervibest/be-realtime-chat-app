@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "/roompb";
+
+service RoomService{
+    rpc GetRoom(GetRoomRequest) returns (GetRoomResponse);
+}
+
+message GetRoomRequest {
+    string room_id = 1;
+  }
+  
+message GetRoomResponse{
+  int64 status = 1; 
+  string error = 2;
+  Room room = 3;
+}
+
+message Room {
+  string 	id = 1;
+  string 	uuid = 2;
+  string 	name = 3;
+  string 	user_id = 4;
+}
+  

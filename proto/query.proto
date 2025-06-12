@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "/querypb";
+
+service QueryService{
+    rpc GetTenLatestMessage(GetTenLatestMessageRequest) returns (GetTenLatestMessageResponse);
+}
+
+message GetTenLatestMessageRequest {
+    string room_id = 1;
+}
+  
+message GetTenLatestMessageResponse{
+  int64 status = 1; 
+  string error = 2;
+  repeated Message message = 3;
+}
+
+message Message {
+  string 	id = 1;
+  string 	room_id = 2;
+  string 	user_id = 3;
+  string  username = 4;
+  string 	content = 5;
+  string  created_at = 6;
+}

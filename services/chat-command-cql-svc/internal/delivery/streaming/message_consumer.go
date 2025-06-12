@@ -1,9 +1,9 @@
-package messaging
+package consumer
 
 import (
-	"be-realtime-chat-app/services/chat-command-cql-svc/internal/helper/logs"
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/model/event"
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/usecase"
+	"be-realtime-chat-app/services/commoner/logs"
 	"context"
 
 	"github.com/bytedance/sonic"
@@ -28,18 +28,18 @@ func NewMessageConsumerImpl(commandUseCase usecase.CommandUseCase, log logs.Log)
 }
 
 func (c messageConsumerImpl) Consume(message *kafka.Message) error {
-	messageEvent := new(event.Message)
-	if err := sonic.ConfigFastest.Unmarshal(message.Value, messageEvent); err != nil {
+	MessageEvent := new(event.Message)
+	if err := sonic.ConfigFastest.Unmarshal(message.Value, MessageEvent); err != nil {
 		c.log.Warn("error unmarshalling Message event", zap.Error(err), zap.String("message", string(message.Value)))
 		return err
 	}
 
-	if err := c.commandUseCase.PersistChat(context.Background(), messageEvent); err != nil {
-		c.log.Warn("error persisting chat message", zap.Error(err), zap.Any("event", messageEvent))
+	if err := c.commandUseCase.PersistChat(context.TODO(), MessageEvent); err != nil {
+		c.log.Error("error persisting Message event", zap.Error(err), zap.String("message", string(message.Value)))
 		return err
 	}
 
 	// TODO process event
-	c.log.Warn("Success fully processed topic messages with event", zap.Any("event", messageEvent), zap.Int32("partition", message.TopicPartition.Partition))
+	c.log.Warn("Received topic messages with event", zap.Any("event", MessageEvent), zap.Int32("partition", message.TopicPartition.Partition))
 	return nil
 }

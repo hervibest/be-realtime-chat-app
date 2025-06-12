@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"be-realtime-chat-app/services/commoner/logs"
 	"be-realtime-chat-app/services/user-svc/internal/entity"
 	"context"
 	"errors"
@@ -10,38 +11,37 @@ import (
 )
 
 type UserRepository interface {
-	// Insert(ctx context.Context, db Querier, user *entity.User) (*entity.User, error)
-	// FindByUUID(ctx context.Context, db Querier, uuid string) (*entity.User, error)
-	// FindByID(ctx context.Context, db Querier, id string) (*entity.User, error)
-	// FindByEmail(ctx context.Context, db Querier, email string) (*entity.User, error)
-	// DeleteByID(ctx context.Context, db Querier, id string) error
-	// DeleteByUUID(ctx context.Context, db Querier, uuid string) error
-	// DeleteByEmail(ctx context.Context, db Querier, email string) error
-	// ExistsByNameOrEmail(ctx context.Context, db Querier, name, email string) (bool, error)
-	// UpdateName(ctx context.Context, db Querier, user *entity.User) (*entity.User, error)
+	DeleteByEmail(ctx context.Context, db Querier, email string) error
+	DeleteByID(ctx context.Context, db Querier, id string) error
+	DeleteByUUID(ctx context.Context, db Querier, uuid string) error
+	ExistsByUsernameOrEmail(ctx context.Context, db Querier, username string, email string) (bool, error)
+	FindByEmail(ctx context.Context, db Querier, email string) (*entity.User, error)
+	FindByID(ctx context.Context, db Querier, id string) (*entity.User, error)
+	FindByUUID(ctx context.Context, db Querier, uuid string) (*entity.User, error)
+	Insert(ctx context.Context, db Querier, user *entity.User) (*entity.User, error)
 }
 type userRepositoryImpl struct {
-	log *zap.Logger
+	log logs.Log
 }
 
-func NewUserRepository(log *zap.Logger) UserRepository {
+func NewUserRepository(log logs.Log) UserRepository {
 	return &userRepositoryImpl{log: log}
 }
 
-// func (r *userRepositoryImpl) Insert(ctx context.Context, db Querier, user *entity.User) (*entity.User, error) {
-// 	query := `
-// 	INSERT INTO users
-// 		(id, name, email, password, uuid, created_at, updated_at
-// 	VALUES
-// 		($1, $2, $3, $4, $5, $6, $7)`
+func (r *userRepositoryImpl) Insert(ctx context.Context, db Querier, user *entity.User) (*entity.User, error) {
+	query := `
+	INSERT INTO users
+		(id, username, email, password)
+	VALUES
+		($1, $2, $3, $4)`
 
-// 	_, err := db.Exec(ctx, query, user.ID, user.Name, user.Email, user.Password, user.UUID, user.CreatedAt, user.UpdatedAt)
-// 	if err != nil {
-// 		r.log.Error("failed to exec insert query", zap.String("query", query), zap.Error(err))
-// 		return nil, err
-// 	}
-// 	return user, nil
-// }
+	_, err := db.Exec(ctx, query, user.ID, user.Username, user.Email, user.Password)
+	if err != nil {
+		r.log.Error("failed to exec insert query", zap.String("query", query), zap.Error(err))
+		return nil, err
+	}
+	return user, nil
+}
 
 func (r *userRepositoryImpl) FindByUUID(ctx context.Context, db Querier, uuid string) (*entity.User, error) {
 	user := new(entity.User)
@@ -109,10 +109,10 @@ func (r *userRepositoryImpl) DeleteByEmail(ctx context.Context, db Querier, emai
 	return nil
 }
 
-func (r *userRepositoryImpl) ExistsByNameOrEmail(ctx context.Context, db Querier, name, email string) (bool, error) {
+func (r *userRepositoryImpl) ExistsByUsernameOrEmail(ctx context.Context, db Querier, username, email string) (bool, error) {
 	var total int
-	query := `SELECT COUNT(*) FROM users WHERE name = $1 OR email = $2 AND deleted_at IS NULL`
-	if err := pgxscan.Get(ctx, db, &total, query, name, email); err != nil {
+	query := `SELECT COUNT(*) FROM users WHERE username = $1 OR email = $2 AND deleted_at IS NULL`
+	if err := pgxscan.Get(ctx, db, &total, query, username, email); err != nil {
 		r.log.Error("failed to get query", zap.String("query", query), zap.Error(err))
 		return false, err
 	}
@@ -123,17 +123,3 @@ func (r *userRepositoryImpl) ExistsByNameOrEmail(ctx context.Context, db Querier
 
 	return false, nil
 }
-
-// func (r *userRepositoryImpl) UpdateName(ctx context.Context, db Querier, user *entity.User, oldUpdateAt *time.Time) (*entity.User, error) {
-// 	query := "UPDATE users SET name = $1, updated_at = $2 WHERE id = $3 AND deleted_at IS NULL AND updated_at = $4"
-// 	row, err := db.Exec(ctx, query, user.Name, user.UpdatedAt, user.ID, oldUpdateAt)
-// 	if err != nil {
-// 		r.log.Error("failed to exec delete query", zap.String("query", query), zap.Error(err))
-// 		return nil, err
-// 	}
-
-// 	if row.RowsAffected() == 0 {
-// 		return nil, errors.New("row has been deleted")
-// 	}
-// 	return user, nil
-// }

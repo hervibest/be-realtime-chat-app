@@ -63,13 +63,11 @@ func (r *messageElasticRepoImpl) SearchMessages(params *model.SearchParams) (*[]
 		query["query"].(map[string]interface{})["bool"] = boolQuery
 	}
 
-	// Encode query using Sonic
 	var buf bytes.Buffer
 	if err := sonic.ConfigFastest.NewEncoder(&buf).Encode(query); err != nil {
 		return nil, fmt.Errorf("error encoding query with sonic: %w", err)
 	}
 
-	// Execute search
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(context.Background()),
 		r.esClient.Search.WithIndex(r.index),
@@ -85,7 +83,6 @@ func (r *messageElasticRepoImpl) SearchMessages(params *model.SearchParams) (*[]
 		return nil, fmt.Errorf("error response: %s", res.String())
 	}
 
-	// Decode response using Sonic
 	var result struct {
 		Hits struct {
 			Hits []struct {
@@ -98,7 +95,6 @@ func (r *messageElasticRepoImpl) SearchMessages(params *model.SearchParams) (*[]
 		return nil, fmt.Errorf("error parsing the response body with sonic: %w", err)
 	}
 
-	// Convert results to messages slice
 	messages := make([]*entity.Message, len(result.Hits.Hits))
 	for i, hit := range result.Hits.Hits {
 		messages[i] = &hit.Source
