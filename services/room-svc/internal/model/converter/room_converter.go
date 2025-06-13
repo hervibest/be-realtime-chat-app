@@ -3,7 +3,6 @@ package converter
 import (
 	"be-realtime-chat-app/services/room-svc/internal/entity"
 	"be-realtime-chat-app/services/room-svc/internal/model"
-	"time"
 )
 
 func RoomToResponse(room *entity.Room) *model.RoomResponse {
@@ -12,11 +11,11 @@ func RoomToResponse(room *entity.Room) *model.RoomResponse {
 	}
 
 	return &model.RoomResponse{
-		ID:        room.ID,
-		UUID:      room.UUID,
-		Name:      room.Name,
-		UserID:    room.UserID,
-		CreatedAt: room.CreatedAt.Format(time.RFC3339),
+		ID:     room.ID,
+		UUID:   room.UUID,
+		Name:   room.Name,
+		UserID: room.UserID,
+		// CreatedAt: room.CreatedAt.Format(time.RFC3339Nano,
 	}
 }
 

@@ -122,7 +122,7 @@ func (r *messageRepository) SoftDelete(id string) error {
 			}
 		}
 	}`
-	updateScript = fmt.Sprintf(updateScript, time.Now().Format(time.RFC3339))
+	updateScript = fmt.Sprintf(updateScript, time.Now().Format(time.RFC3339Nano))
 
 	req := esapi.UpdateRequest{
 		Index:      r.index,

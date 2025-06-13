@@ -11,6 +11,7 @@ import (
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/oklog/ulid/v2"
+	"go.uber.org/zap"
 )
 
 type ChatController interface {
@@ -30,6 +31,7 @@ func NewChatController(roomUseCase usecase.ChatUseCase, log logs.Log) ChatContro
 }
 
 func (c *roomControllerImpl) JoinRoom(ctx *fiber.Ctx) error {
+	c.log.Info("JoinRoom called", zap.String("roomID", ctx.Params("roomID")))
 	request := new(model.JoinRoomRequest)
 	roomID := ctx.Params("roomID")
 	_, err := ulid.Parse(roomID)
@@ -44,8 +46,15 @@ func (c *roomControllerImpl) JoinRoom(ctx *fiber.Ctx) error {
 	request.Username = user.Username
 
 	if websocket.IsWebSocketUpgrade(ctx) {
+		// Capture the context before entering the WebSocket handler
+		parentCtx := ctx.Context()
+
 		return websocket.New(func(conn *websocket.Conn) {
-			if err := c.roomUseCase.JoinRoom(ctx.Context(), conn, request); err != nil {
+			// Use the captured context
+			if err := c.roomUseCase.JoinRoom(parentCtx, conn, request); err != nil {
+				if appErr, ok := err.(*helper.AppError); ok {
+					c.log.Info(appErr.Message)
+				}
 				return
 			}
 		})(ctx)

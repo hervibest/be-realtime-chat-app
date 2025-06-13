@@ -37,6 +37,9 @@ func (c *roomControllerImpl) CreateRoom(ctx *fiber.Ctx) error {
 		return helper.ErrBodyParserResponseJSON(ctx, err)
 	}
 
+	user := middleware.GetUser(ctx)
+	request.UserID = user.ID
+
 	response, err := c.roomUseCase.CreateRoom(ctx.Context(), request)
 	if err != nil {
 		if validatonErrs, ok := err.(*helper.UseCaseValError); ok {

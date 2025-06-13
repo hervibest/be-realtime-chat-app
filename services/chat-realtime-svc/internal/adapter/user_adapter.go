@@ -8,6 +8,8 @@ import (
 	"be-realtime-chat-app/services/commoner/utils"
 	"context"
 	"log"
+
+	"go.uber.org/zap"
 )
 
 type UserAdapter interface {
@@ -20,6 +22,7 @@ type userAdapter struct {
 
 func NewUserAdapter(ctx context.Context, registry discovery.Registry, logs logs.Log) (UserAdapter, error) {
 	userServiceName := utils.GetEnv("USER_SVC_NAME") + "-grpc"
+	logs.Info("Connecting to user service", zap.String("service_name", userServiceName))
 	conn, err := discovery.ServiceConnection(ctx, userServiceName, registry, logs)
 	if err != nil {
 		return nil, err

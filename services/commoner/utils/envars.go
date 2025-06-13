@@ -62,7 +62,7 @@ func getOSEnv(key string, failedSources *[]string) string {
 }
 
 func getDotEnv(key string, failedSources *[]string) string {
-	if err := godotenv.Load("../../../.env"); err != nil {
+	if err := godotenv.Load("../../.env"); err != nil {
 		*failedSources = append(*failedSources, ".env")
 		return ""
 	}

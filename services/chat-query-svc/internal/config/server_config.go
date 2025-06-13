@@ -8,13 +8,13 @@ import (
 )
 
 type ServerConfig struct {
-	UserHTTPAddr string
-	UserHTTPPort string
-	UserSvcName  string
+	QueryHTTPAddr string
+	QueryHTTPPort string
+	QuerySvcName  string
 
-	UserGRPCAddr         string
-	UserGRPCPort         string
-	UserGRPCInternalAddr string
+	QueryGRPCAddr         string
+	QueryGRPCPort         string
+	QueryGRPCInternalAddr string
 
 	ConsulAddr string
 }
@@ -34,13 +34,13 @@ func NewServerConfig() *ServerConfig {
 	consulAddr := fmt.Sprintf("%s:%s", utils.GetEnv("CONSUL_HOST"), utils.GetEnv("CONSUL_PORT"))
 
 	return &ServerConfig{
-		UserHTTPAddr: utils.GetEnv("USER_HTTP_ADDR"),
-		UserHTTPPort: utils.GetEnv("USER_HTTP_PORT"),
-		UserSvcName:  utils.GetEnv("USER_SVC_NAME"),
+		QueryHTTPAddr: utils.GetEnv("QUERY_HTTP_ADDR"),
+		QueryHTTPPort: utils.GetEnv("QUERY_HTTP_PORT"),
+		QuerySvcName:  utils.GetEnv("QUERY_SVC_NAME"),
 
-		UserGRPCAddr:         utils.GetEnv("USER_GRPC_ADDR"),
-		UserGRPCPort:         utils.GetEnv("USER_GRPC_PORT"),
-		UserGRPCInternalAddr: ip,
+		QueryGRPCAddr:         utils.GetEnv("QUERY_GRPC_ADDR"),
+		QueryGRPCPort:         utils.GetEnv("QUERY_GRPC_PORT"),
+		QueryGRPCInternalAddr: ip,
 
 		ConsulAddr: consulAddr,
 	}

@@ -24,7 +24,6 @@ services:
     ports:
       - "${DB_PORT}:5432"
 
-
   nats:
     image: nats:2.11.2-alpine
     ports:
@@ -33,6 +32,80 @@ services:
     networks:
       - backend
     command: ["-js", "-m", "8222"]
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    hostname: zookeeper
+    container_name: zookeeper-latest
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - backend
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.3
+    hostname: kafka
+    container_name: kafka-latest
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - backend
+
+  scylladb:
+    image: scylladb/scylla:5.4.6
+    container_name: scylladb
+    restart: unless-stopped
+    ports:
+      - "9042:9042"  # CQL port
+      - "9160:9160"  # Thrift port (legacy)
+      - "9180:9180"  # Prometheus metrics
+      - "7000:7000"  # Inter-node communication
+      - "7001:7001"  # SSL inter-node communication
+      - "10000:10000"  # Alternator (DynamoDB-compatible API)
+    networks:
+      - backend
+    environment:
+      - SCYLLA_DC=dc1
+      - SCYLLA_CLUSTER_NAME=my_scylla_cluster
+    volumes:
+      - scylla-data:/var/lib/scylla
+    command: --smp 1 --memory 1G --overprovisioned 1 --developer-mode 1
+
+  elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+      container_name: elasticsearch
+      environment:
+        - discovery.type=single-node
+        - xpack.security.enabled=true  # Disable security
+        - ELASTIC_PASSWORD=herviStrongPassword12345! 
+        - ES_JAVA_OPTS=-Xms512m -Xmx512m  # Set Java heap size
+
+      volumes:
+        - esdata:/usr/share/elasticsearch/data
+      ports:
+        - "9200:9200" # REST API
+        - "9300:9300" # Transport protocol
+      networks:
+        - backend
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      restart: unless-stopped
 
   consul:
     image: hashicorp/consul:1.20.6
@@ -42,6 +115,21 @@ services:
     networks:
       - backend
 
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.4
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+    - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    - ELASTICSEARCH_USERNAME=hervi
+    - ELASTIC_PASSWORD=herviStrongPassword12345! 
+    networks:
+      - backend
+    restart: unless-stopped
+
 networks:
   backend:
     name: backend
@@ -49,3 +137,5 @@ networks:
 
 volumes:
   pgdata:
+  scylla-data:
+  esdata:

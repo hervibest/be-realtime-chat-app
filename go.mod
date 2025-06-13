@@ -1,8 +1,6 @@
 module be-realtime-chat-app
 
-go 1.23.8
-
-toolchain go1.23.9
+go 1.23.9
 
 require (
 	github.com/bytedance/sonic v1.13.3
@@ -14,7 +12,6 @@ require (
 	github.com/gocql/gocql v1.7.0
 	github.com/gofiber/contrib/websocket v1.3.4
 	github.com/gofiber/fiber/v2 v2.52.8
-	github.com/gofiber/websocket/v2 v2.2.1
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/consul/api v1.32.1

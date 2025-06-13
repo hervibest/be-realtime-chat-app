@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -46,17 +47,20 @@ func BeginTxx(ctx context.Context, db DB, fn func(tx TX) error) error {
 	if err != nil {
 		return err
 	}
+
 	defer func() {
 		if err != nil {
+			log.Default().Print("Transaction failed, rolling back")
 			_ = tx.Rollback(ctx)
 		}
 	}()
 
-	if err := fn(tx); err != nil {
+	if err = fn(tx); err != nil {
+		_ = tx.Rollback(ctx)
 		return err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
 	return nil

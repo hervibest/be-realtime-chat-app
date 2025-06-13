@@ -8,13 +8,13 @@ import (
 )
 
 type ServerConfig struct {
-	UserHTTPAddr string
-	UserHTTPPort string
-	UserSvcName  string
+	RoomHTTPAddr string
+	RoomHTTPPort string
+	RoomSvcName  string
 
-	UserGRPCAddr         string
-	UserGRPCPort         string
-	UserGRPCInternalAddr string
+	RoomGRPCAddr         string
+	RoomGRPCPort         string
+	RoomGRPCInternalAddr string
 
 	ConsulAddr string
 }
@@ -34,13 +34,13 @@ func NewServerConfig() *ServerConfig {
 	consulAddr := fmt.Sprintf("%s:%s", utils.GetEnv("CONSUL_HOST"), utils.GetEnv("CONSUL_PORT"))
 
 	return &ServerConfig{
-		UserHTTPAddr: utils.GetEnv("USER_HTTP_ADDR"),
-		UserHTTPPort: utils.GetEnv("USER_HTTP_PORT"),
-		UserSvcName:  utils.GetEnv("USER_SVC_NAME"),
+		RoomHTTPAddr: utils.GetEnv("ROOM_HTTP_ADDR"),
+		RoomHTTPPort: utils.GetEnv("ROOM_HTTP_PORT"),
+		RoomSvcName:  utils.GetEnv("ROOM_SVC_NAME"),
 
-		UserGRPCAddr:         utils.GetEnv("USER_GRPC_ADDR"),
-		UserGRPCPort:         utils.GetEnv("USER_GRPC_PORT"),
-		UserGRPCInternalAddr: ip,
+		RoomGRPCAddr:         utils.GetEnv("ROOM_GRPC_ADDR"),
+		RoomGRPCPort:         utils.GetEnv("ROOM_GRPC_PORT"),
+		RoomGRPCInternalAddr: ip,
 
 		ConsulAddr: consulAddr,
 	}

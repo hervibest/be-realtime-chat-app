@@ -21,6 +21,7 @@ import (
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -46,15 +47,15 @@ func webServer(ctx context.Context) error {
 
 	customValidator := helper.NewCustomValidator()
 
-	registry, err := consul.NewRegistry(serverConfig.ConsulAddr, serverConfig.UserSvcName)
+	registry, err := consul.NewRegistry(serverConfig.ConsulAddr, serverConfig.RoomSvcName)
 	if err != nil {
 		logger.Error("Failed to create consul registry for service" + err.Error())
 	}
 
-	GRPCserviceID := discovery.GenerateServiceID(serverConfig.UserSvcName + "-grpc")
-	grpcPortInt, _ := strconv.Atoi(serverConfig.UserGRPCPort)
+	GRPCserviceID := discovery.GenerateServiceID(serverConfig.RoomSvcName + "-grpc")
+	grpcPortInt, _ := strconv.Atoi(serverConfig.RoomGRPCPort)
 
-	err = registry.RegisterService(ctx, serverConfig.UserSvcName+"-grpc", GRPCserviceID, serverConfig.UserGRPCInternalAddr, grpcPortInt, []string{"grpc"})
+	err = registry.RegisterService(ctx, serverConfig.RoomSvcName+"-grpc", GRPCserviceID, serverConfig.RoomGRPCInternalAddr, grpcPortInt, []string{"grpc"})
 	if err != nil {
 		logger.Error("Failed to register chat service to consul", zap.Error(err))
 	}
@@ -78,7 +79,7 @@ func webServer(ctx context.Context) error {
 		logger.Info("Successfully shutdown...")
 	}()
 
-	go consul.StartHealthCheckLoop(ctx, registry, GRPCserviceID, serverConfig.UserSvcName+"-grpc", logger)
+	go consul.StartHealthCheckLoop(ctx, registry, GRPCserviceID, serverConfig.RoomSvcName+"-grpc", logger)
 
 	roomRepo := repository.NewRoomRepository(logger)
 
@@ -90,7 +91,7 @@ func webServer(ctx context.Context) error {
 		grpcServer = grpc.NewServer()
 		logger.Info("Initiate grpc server stage 1")
 		reflection.Register(grpcServer)
-		l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", serverConfig.UserGRPCAddr, serverConfig.UserGRPCPort))
+		l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", serverConfig.RoomGRPCAddr, serverConfig.RoomGRPCPort))
 		if err != nil {
 			logger.Error(fmt.Sprintf("Failed to listen: %v", err))
 			return
@@ -112,10 +113,14 @@ func webServer(ctx context.Context) error {
 	roomRoute := route.NewRoomRoute(app, roomController, userMiddleware)
 	roomRoute.RegisterRoutes()
 
+	logger.Info("Initiate server stage 2")
+
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		serverErrors <- app.Listen(fmt.Sprintf("%s:%s", serverConfig.UserHTTPAddr, serverConfig.UserHTTPPort))
+		logger.Info("Initiate server stage 2")
+
+		serverErrors <- app.Listen(fmt.Sprintf("%s:%s", serverConfig.RoomHTTPAddr, serverConfig.RoomHTTPPort))
 	}()
 
 	select {
@@ -131,5 +136,6 @@ func main() {
 	defer stop()
 
 	if err := webServer(ctx); err != nil {
+		log.Error("Failed to start web server", err)
 	}
 }

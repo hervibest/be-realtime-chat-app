@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
 )
 
 type JWTAdapter interface {
@@ -20,27 +20,27 @@ type JWTAdapter interface {
 }
 
 type jwtAdapter struct {
-	adminAccessSecretByte    []byte
-	employeeAccessSecretByte []byte
-	adminAccessExpireTime    time.Duration
-	employeeAccessExpireTime time.Duration
+	adminAccessSecretByte []byte
+	userAccessSecretByte  []byte
+	adminAccessExpireTime time.Duration
+	userAccessExpireTime  time.Duration
 }
 
 func NewJWTAdapter() JWTAdapter {
 	adminAccessSecret := utils.GetEnv("ADMIN_ACCESS_TOKEN_SECRET")
-	employeeAccessSecret := utils.GetEnv("EMPLOYEE_ACCESS_TOKEN_SECRET")
+	userAccessSecret := utils.GetEnv("USER_ACCESS_TOKEN_SECRET")
 
 	adminAccessExpireStr := utils.GetEnv("ADMIN_ACCESS_TOKEN_EXP_MINUTE")
-	employeeAccessExpireStr := utils.GetEnv("EMPLOYEE_ACCESS_TOKEN_EXP_MINUTE")
+	userAccessExpireStr := utils.GetEnv("USER_ACCESS_TOKEN_EXP_MINUTE")
 
 	adminAccessExpireInt, _ := strconv.Atoi(adminAccessExpireStr)
-	employeeAccessExpireInt, _ := strconv.Atoi(employeeAccessExpireStr)
+	userAccessExpireInt, _ := strconv.Atoi(userAccessExpireStr)
 
 	return &jwtAdapter{
-		adminAccessSecretByte:    []byte(adminAccessSecret),
-		employeeAccessSecretByte: []byte(employeeAccessSecret),
-		adminAccessExpireTime:    time.Duration(adminAccessExpireInt),
-		employeeAccessExpireTime: time.Duration(employeeAccessExpireInt),
+		adminAccessSecretByte: []byte(adminAccessSecret),
+		userAccessSecretByte:  []byte(userAccessSecret),
+		adminAccessExpireTime: time.Duration(adminAccessExpireInt),
+		userAccessExpireTime:  time.Duration(userAccessExpireInt),
 	}
 }
 
@@ -66,7 +66,7 @@ func (c *jwtAdapter) GenerateAdminAccessToken(userID string) (*entity.AdminAcces
 }
 
 func (c *jwtAdapter) GenerateUserAccessToken(userID string) (*entity.UserAccessToken, error) {
-	expirationTime := time.Now().Add(time.Minute * c.employeeAccessExpireTime)
+	expirationTime := time.Now().Add(time.Minute * c.userAccessExpireTime)
 
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
@@ -74,7 +74,7 @@ func (c *jwtAdapter) GenerateUserAccessToken(userID string) (*entity.UserAccessT
 	claims["exp"] = expirationTime.Unix()
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	stringToken, err := token.SignedString(c.employeeAccessSecretByte)
+	stringToken, err := token.SignedString(c.userAccessSecretByte)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (c *jwtAdapter) VerifyAdminAccessToken(token string) (*entity.AdminAccessTo
 			return nil, fmt.Errorf("Invalid token claims")
 		}
 
-		_, err := uuid.Parse(userIdStr)
+		_, err := ulid.Parse(userIdStr)
 		if err != nil {
 			log.Println("failed to parse ulid:", err)
 			return nil, fmt.Errorf("Invalid token claims")
@@ -138,7 +138,7 @@ func (c *jwtAdapter) VerifyAdminAccessToken(token string) (*entity.AdminAccessTo
 
 func (c *jwtAdapter) VerifyUserAccessToken(token string) (*entity.UserAccessToken, error) {
 	tokenClaims, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
-		return c.employeeAccessSecretByte, nil
+		return c.userAccessSecretByte, nil
 	})
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (c *jwtAdapter) VerifyUserAccessToken(token string) (*entity.UserAccessToke
 			return nil, fmt.Errorf("Invalid token claims")
 		}
 
-		_, err := uuid.Parse(userIdStr)
+		_, err := ulid.Parse(userIdStr)
 		if err != nil {
 			log.Println("failed to parse ulid:", err)
 			return nil, fmt.Errorf("Invalid token claims")

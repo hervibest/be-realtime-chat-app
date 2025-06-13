@@ -20,15 +20,17 @@ type ChatUseCase interface {
 type chatUseCase struct {
 	messagingAdapter adapter.MessagingAdapter
 	roomAdapter      adapter.RoomAdapter
+	queryAdapter     adapter.QueryAdapter
 	customValidator  helper.CustomValidator
 	log              logs.Log
 }
 
 func NewChatUseCase(messagingAdapter adapter.MessagingAdapter, roomAdapter adapter.RoomAdapter,
-	customValidator helper.CustomValidator, log logs.Log) ChatUseCase {
+	queryAdapter adapter.QueryAdapter, customValidator helper.CustomValidator, log logs.Log) ChatUseCase {
 	return &chatUseCase{
 		messagingAdapter: messagingAdapter,
 		roomAdapter:      roomAdapter,
+		queryAdapter:     queryAdapter,
 		customValidator:  customValidator,
 		log:              log,
 	}
@@ -39,6 +41,8 @@ func (uc *chatUseCase) JoinRoom(ctx context.Context, conn *websocket.Conn, reque
 	if validatonErrs := uc.customValidator.ValidateUseCase(request); validatonErrs != nil {
 		return validatonErrs
 	}
+
+	uc.log.Info("JoinRoom called", zap.String("username", request.Username), zap.String("userID", request.UserID))
 
 	uc.log.Info("Join room request", zap.String("roomID", request.RoomID), zap.String("roomID", request.UserID))
 	room, err := uc.roomAdapter.GetRoom(ctx, request.RoomID)
@@ -52,15 +56,20 @@ func (uc *chatUseCase) JoinRoom(ctx context.Context, conn *websocket.Conn, reque
 	}
 
 	client := &websockets.UserClient{
-		Conn:      conn,
-		Messaging: uc.messagingAdapter,
-		UserID:    request.UserID,
-		RoomID:    room.Room.GetId(),
-		Email:     request.Email,
+		Log:          uc.log,
+		Conn:         conn,
+		Messaging:    uc.messagingAdapter,
+		QueryAdapter: uc.queryAdapter,
+		UserID:       request.UserID,
+		RoomID:       room.Room.GetId(),
+		Email:        request.Email,
+		Username:     request.Username,
 	}
 
-	go client.Subscriber()
-	client.Publisher()
+	done := make(chan struct{})
+	go client.Subscriber(done)
+	client.Publisher(done)
+	close(done)
 
 	return nil
 }

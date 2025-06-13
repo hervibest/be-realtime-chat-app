@@ -1,4 +1,4 @@
-package worker
+package main
 
 import (
 	"be-realtime-chat-app/services/chat-command-cql-svc/internal/config"

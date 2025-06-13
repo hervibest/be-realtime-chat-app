@@ -44,7 +44,7 @@ func getErrorMessage(err validator.FieldError) string {
 	case "required":
 		return fmt.Sprintf("%s is required", err.Field())
 	case "timeformat":
-		return fmt.Sprintf("'%s' must be a valid time format (example: %s)", err.Field(), time.RFC3339)
+		return fmt.Sprintf("'%s' must be a valid time format (example: %s)", err.Field(), time.RFC3339Nano)
 	case "email":
 		return fmt.Sprintf("%s must be a valid email address", err.Field())
 	case "min":

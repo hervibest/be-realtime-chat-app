@@ -12,6 +12,7 @@ import (
 type ConsumerHandler func(message *kafka.Message) error
 
 func ConsumeTopic(ctx context.Context, consumer *kafka.Consumer, topic string, log logs.Log, handler ConsumerHandler) {
+	log.Info("Starting consumer for topic", zap.String("topic", topic))
 	err := consumer.Subscribe(topic, nil)
 	if err != nil {
 		log.Fatal("Failed to subscribe to topic: %v", zap.Error(err), zap.String("topic", topic))
@@ -25,8 +26,10 @@ func ConsumeTopic(ctx context.Context, consumer *kafka.Consumer, topic string, l
 		case <-ctx.Done():
 			run = false
 		default:
+			log.Debug("Waiting for messages", zap.String("topic", topic))
 			message, err := consumer.ReadMessage(time.Second)
 			if err == nil {
+				log.Info("Received message", zap.String("topic", topic), zap.Int32("partition", message.TopicPartition.Partition), zap.String("value", string(message.Value)))
 				err := handler(message)
 				if err != nil {
 					log.Error("Error processing message: %v", zap.Error(err), zap.String("topic", topic), zap.Int32("partition", message.TopicPartition.Partition))

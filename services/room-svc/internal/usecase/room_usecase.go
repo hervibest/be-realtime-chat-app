@@ -47,6 +47,7 @@ func NewRoomUseCase(db repository.DB, roomRepository repository.RoomRepository, 
 		db:              db,
 		roomRepository:  roomRepository,
 		messaging:       messaging,
+		cacheAdapter:    cacheAdapter,
 		customValidator: customValidator,
 		log:             log,
 	}
@@ -187,6 +188,7 @@ func (uc *roomUseCaseImpl) findCachedByRoomID(ctx context.Context, roomID string
 			return nil, helper.WrapInternalServerError(uc.log, "failed to save room to cache", err)
 		}
 	} else {
+		room = &entity.Room{}
 		if err := sonic.ConfigFastest.Unmarshal([]byte(cachedRoom), room); err != nil {
 			return nil, helper.WrapInternalServerError(uc.log, "failed to unmarshal room body from cached", err)
 		}

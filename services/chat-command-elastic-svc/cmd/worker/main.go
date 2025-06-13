@@ -1,4 +1,4 @@
-package worker
+package main
 
 import (
 	"be-realtime-chat-app/services/chat-command-elastic-svc/internal/config"
@@ -20,6 +20,9 @@ func main() {
 
 	kafkaConsumer := config.NewKafkaConsumer(logger)
 	elasticsearchClient, err := config.NewElasticsearch()
+	// if err := config.CreateMessageIndex(elasticsearchClient); err != nil {
+	// 	logger.Fatal("Failed to create message index", zap.Error(err))
+	// }
 
 	messageRepository := repository.NewMessageRepository(elasticsearchClient)
 	commandAsyncUseCase := usecase.NewCommandAsyncUseCase(messageRepository, logger)

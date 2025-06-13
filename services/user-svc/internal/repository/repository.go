@@ -52,11 +52,12 @@ func BeginTxx(ctx context.Context, db DB, fn func(tx TX) error) error {
 		}
 	}()
 
-	if err := fn(tx); err != nil {
+	if err = fn(tx); err != nil {
+		_ = tx.Rollback(ctx)
 		return err
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
 	return nil

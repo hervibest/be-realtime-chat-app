@@ -7,14 +7,12 @@ import (
 	"be-realtime-chat-app/services/chat-realtime-svc/internal/delivery/http/middleware"
 	"be-realtime-chat-app/services/chat-realtime-svc/internal/delivery/http/route"
 	"be-realtime-chat-app/services/chat-realtime-svc/internal/usecase"
-	"be-realtime-chat-app/services/commoner/discovery"
 	"be-realtime-chat-app/services/commoner/discovery/consul"
 	"be-realtime-chat-app/services/commoner/helper"
 	"be-realtime-chat-app/services/commoner/logs"
 	"context"
 	"fmt"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	"github.com/gofiber/fiber/v2"
@@ -40,17 +38,9 @@ func webServer(ctx context.Context) error {
 
 	customValidator := helper.NewCustomValidator()
 
-	registry, err := consul.NewRegistry(serverConfig.ConsulAddr, serverConfig.UserSvcName)
+	registry, err := consul.NewRegistry(serverConfig.ConsulAddr, serverConfig.ChatSvcName)
 	if err != nil {
 		logger.Error("Failed to create consul registry for service" + err.Error())
-	}
-
-	GRPCserviceID := discovery.GenerateServiceID(serverConfig.UserSvcName + "-grpc")
-	grpcPortInt, _ := strconv.Atoi(serverConfig.UserGRPCPort)
-
-	err = registry.RegisterService(ctx, serverConfig.UserSvcName+"-grpc", GRPCserviceID, serverConfig.UserGRPCInternalAddr, grpcPortInt, []string{"grpc"})
-	if err != nil {
-		logger.Error("Failed to register realtime service to consul", zap.Error(err))
 	}
 
 	userAdapter, err := adapter.NewUserAdapter(ctx, registry, logger)
@@ -63,10 +53,14 @@ func webServer(ctx context.Context) error {
 		logger.Error("Failed to create room adapter", zap.Error(err))
 	}
 
+	queryAdapter, err := adapter.NewQueryAdapter(ctx, registry, logger)
+	if err != nil {
+		logger.Error("Failed to create room adapter", zap.Error(err))
+	}
+
 	go func() {
 		<-ctx.Done()
 		logger.Info("Context canceled. Deregistering services...")
-		registry.DeregisterService(context.Background(), GRPCserviceID)
 
 		logger.Info("Shutting down servers...")
 		if err := app.Shutdown(); err != nil {
@@ -77,9 +71,7 @@ func webServer(ctx context.Context) error {
 		logger.Info("Successfully shutdown...")
 	}()
 
-	go consul.StartHealthCheckLoop(ctx, registry, GRPCserviceID, serverConfig.UserSvcName+"-grpc", logger)
-
-	chatUC := usecase.NewChatUseCase(messagingAdapter, roomAdapter, customValidator, logger)
+	chatUC := usecase.NewChatUseCase(messagingAdapter, roomAdapter, queryAdapter, customValidator, logger)
 
 	chatController := controller.NewChatController(chatUC, logger)
 
@@ -91,7 +83,7 @@ func webServer(ctx context.Context) error {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		serverErrors <- app.Listen(fmt.Sprintf("%s:%s", serverConfig.UserHTTPAddr, serverConfig.UserHTTPPort))
+		serverErrors <- app.Listen(fmt.Sprintf("%s:%s", serverConfig.ChatHTTPAddr, serverConfig.ChatHTTPPort))
 	}()
 
 	select {

@@ -42,7 +42,14 @@ type userUseCase struct {
 
 func NewUserUseCase(db repository.DB, userRepository repository.UserRepository, jwtAdapter adapter.JWTAdapter,
 	cacheAdapter adapter.CacheAdapter, customValidator helper.CustomValidator, logs logs.Log) UserUseCase {
-	return &userUseCase{}
+	return &userUseCase{
+		db:              db,
+		userRepository:  userRepository,
+		jwtAdapter:      jwtAdapter,
+		cacheAdapter:    cacheAdapter,
+		customValidator: customValidator,
+		logs:            logs,
+	}
 }
 
 func (uc *userUseCase) RegisterUser(ctx context.Context, request *model.RegisterUserRequest) (*model.UserResponse, error) {

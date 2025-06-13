@@ -4,34 +4,46 @@ import (
 	"be-realtime-chat-app/services/chat-query-svc/internal/entity"
 	"fmt"
 
-	"github.com/scylladb/gocqlx/v2"
-	"github.com/scylladb/gocqlx/v2/qb"
+	"github.com/gocql/gocql"
 )
 
 type messageCQLRepoImpl struct {
-	session gocqlx.Session
+	session *gocql.Session
 }
 
 type MessageCQLRepository interface {
 	FindManyByRoomID(roomID string, limit int) (*[]*entity.Message, error)
 }
 
-func NewMessageCQLRepository(session gocqlx.Session) MessageCQLRepository {
+func NewMessageCQLRepository(session *gocql.Session) MessageCQLRepository {
 	return &messageCQLRepoImpl{session: session}
 }
 
 func (r *messageCQLRepoImpl) FindManyByRoomID(roomID string, limit int) (*[]*entity.Message, error) {
 	var messages []*entity.Message
 
-	query := qb.Select("messages").
-		Where(qb.Eq("room_id")).
-		Limit(uint(limit)).
-		Query(r.session).
-		BindMap(qb.M{
-			"room_id": roomID,
-		})
+	query := `SELECT id, uuid, room_id, user_id, username, content, created_at, deleted_at 
+	          FROM messages WHERE room_id = ? LIMIT ?`
 
-	if err := query.SelectRelease(&messages); err != nil {
+	iter := r.session.Query(query, roomID, limit).Iter()
+
+	var msg entity.Message
+	for iter.Scan(
+		&msg.ID,
+		&msg.UUID,
+		&msg.RoomID,
+		&msg.UserID,
+		&msg.Username,
+		&msg.Content,
+		&msg.CreatedAt,
+		&msg.DeletedAt,
+	) {
+		// Create a new copy of the message to avoid overwriting
+		m := msg
+		messages = append(messages, &m)
+	}
+
+	if err := iter.Close(); err != nil {
 		return nil, fmt.Errorf("failed to find messages by room ID: %w", err)
 	}
 

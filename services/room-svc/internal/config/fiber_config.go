@@ -1,6 +1,7 @@
 package config
 
 import (
+	"be-realtime-chat-app/services/commoner/utils"
 	"errors"
 	"net/http"
 
@@ -13,6 +14,7 @@ func NewApp() *fiber.App {
 	app := fiber.New(fiber.Config{
 		Prefork:      false,
 		ErrorHandler: CustomError(),
+		AppName:      utils.GetEnv("ROOM_SVC_NAME"),
 		JSONEncoder:  sonic.ConfigStd.Marshal,
 		JSONDecoder:  sonic.ConfigStd.Unmarshal,
 	})

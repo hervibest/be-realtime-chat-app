@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     name VARCHAR(255) NOT NULL,
     user_id CHAR(26) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT current_timestamp,
-    deleted_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_rooms_uuid ON rooms (uuid);

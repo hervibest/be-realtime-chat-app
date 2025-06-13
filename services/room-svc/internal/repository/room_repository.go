@@ -35,7 +35,7 @@ func (r *roomRepositoryImpl) Insert(ctx context.Context, db Querier, room *entit
 	VALUES
 		($1, $2, $3)`
 
-	_, err := db.Exec(ctx, query, room.ID, room.Name)
+	_, err := db.Exec(ctx, query, room.ID, room.Name, room.UserID)
 	if err != nil {
 		r.log.Error("failed to exec insert query", zap.String("query", query), zap.Error(err))
 		return nil, err

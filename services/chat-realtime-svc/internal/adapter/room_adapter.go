@@ -37,7 +37,6 @@ func (a *roomAdapter) GetRoom(ctx context.Context, roomID string) (*roompb.GetRo
 	processPhotoRequest := &roompb.GetRoomRequest{
 		RoomId: roomID,
 	}
-
 	response, err := a.client.GetRoom(ctx, processPhotoRequest)
 	if err != nil {
 		return nil, helper.FromGRPCError(err)

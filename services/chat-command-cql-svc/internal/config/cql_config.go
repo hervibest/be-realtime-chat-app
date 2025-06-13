@@ -15,9 +15,7 @@ const (
 
 func NewCQLDB() (*gocql.Session, error) {
 	hosts := []string{
-		utils.GetEnv("SCYLLA_HOST_1"),
-		utils.GetEnv("SCYLLA_HOST_2"),
-		utils.GetEnv("SCYLLA_HOST_3"),
+		utils.GetEnv("SCYLLA_BOOTSTRAP_SERVERS"),
 	}
 
 	cluster := gocql.NewCluster(hosts...)

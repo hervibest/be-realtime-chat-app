@@ -8,7 +8,7 @@ import (
 )
 
 func (uc *messageUseCaseImpl) Persist(ctx context.Context, request *event.Message) error {
-	createdAt, _ := time.Parse(time.RFC3339, request.CreatedAt)
+	createdAt, _ := time.Parse(time.RFC3339Nano, request.CreatedAt)
 	message := &entity.Message{
 		ID:        request.ID,
 		RoomID:    request.RoomID,

@@ -26,6 +26,7 @@ func GenerateServiceID(serviceName string) string {
 }
 
 func ServiceConnection(ctx context.Context, serviceName string, registry Registry, logs logs.Log) (*grpc.ClientConn, error) {
+	logs.Info(fmt.Sprintf("attempting to connect to service: %s", serviceName))
 	retryTime, _ := strconv.Atoi(utils.GetEnv("SERVICE_DISCOVERY_RETRY_TIME"))
 	maxRetries, _ := strconv.Atoi(utils.GetEnv("SERVICE_DISCOVERY_MAX_RETRIES"))
 	retryDelay := time.Duration(retryTime) * time.Second

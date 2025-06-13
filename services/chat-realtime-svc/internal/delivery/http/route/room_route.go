@@ -22,5 +22,5 @@ func NewRoomRoute(app *fiber.App, chatController controller.ChatController, user
 
 func (r *RoomRoute) RegisterRoutes() {
 	chatRoute := r.app.Group("/api/v1/chat", r.userMiddleware)
-	chatRoute.Post("/join/:roomID", r.chatController.JoinRoom)
+	chatRoute.Get("/join/:roomID", r.chatController.JoinRoom)
 }

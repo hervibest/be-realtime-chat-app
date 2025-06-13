@@ -33,6 +33,7 @@ func (c messageConsumerImpl) Consume(message *kafka.Message) error {
 		c.log.Warn("error unmarshalling Message event", zap.Error(err), zap.String("message", string(message.Value)))
 		return err
 	}
+	c.log.Warn("Received topic messages with event", zap.Any("event", MessageEvent), zap.Int32("partition", message.TopicPartition.Partition))
 
 	if err := c.commandAsyncUseCase.Persist(context.TODO(), MessageEvent); err != nil {
 		c.log.Error("error persisting Message event", zap.Error(err), zap.String("message", string(message.Value)))

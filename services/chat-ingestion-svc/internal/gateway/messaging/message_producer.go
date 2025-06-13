@@ -24,7 +24,7 @@ func NewMessageProducer(streaming adapter.StreamingAdapter, log logs.Log) Messag
 }
 
 func (p *messageProducerImpl) ProduceMessage(event *event.Message) error {
-	p.log.Info("Processing message", zap.String("roomID", event.RoomID), zap.String("message", string(event.Content)))
+	p.log.Info("Processing message", zap.String("roomID", event.RoomID), zap.String("created_at", string(event.CreatedAt)))
 	value, err := sonic.ConfigFastest.Marshal(event)
 	if err != nil {
 		p.log.Error("Failed to marshal message", zap.Error(err), zap.String("message", event.RoomID))

@@ -20,17 +20,16 @@ type queryUseCaseImpl struct {
 	messageCQLRepository     repository.MessageCQLRepository
 	messageElasticRepository repository.MessageElasticRepo
 	roomAdapter              adapter.RoomAdapter
-	db                       repository.DB
+	customValidator          helper.CustomValidator
 	log                      logs.Log
 }
 
 func NewQueryUseCase(messageCQLRepository repository.MessageCQLRepository, messageElasticRepository repository.MessageElasticRepo,
-	roomAdapter adapter.RoomAdapter, db repository.DB, log logs.Log) QueryUseCase {
+	roomAdapter adapter.RoomAdapter, customValidator helper.CustomValidator, log logs.Log) QueryUseCase {
 	return &queryUseCaseImpl{
 		messageCQLRepository:     messageCQLRepository,
 		messageElasticRepository: messageElasticRepository,
 		roomAdapter:              roomAdapter,
-		db:                       db,
 		log:                      log,
 	}
 }
@@ -45,6 +44,10 @@ func (uc *queryUseCaseImpl) GetTenLatestMessage(ctx context.Context, roomID stri
 }
 
 func (uc *queryUseCaseImpl) SearchMessages(ctx context.Context, params *model.SearchParams) (*[]*model.MessageResponse, error) {
+	if validatonErrs := uc.customValidator.ValidateUseCase(params); validatonErrs != nil {
+		return nil, validatonErrs
+	}
+
 	_, err := uc.roomAdapter.GetRoom(ctx, params.RoomID)
 	if appErr, ok := err.(*helper.AppError); ok {
 		if appErr.Code == errorcode.ErrUserNotFound {

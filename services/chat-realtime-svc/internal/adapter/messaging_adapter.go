@@ -11,6 +11,7 @@ import (
 type MessagingAdapter interface {
 	PublishMessage(ctx context.Context, topic string, data any) error
 	Subscribe(subj string, cb nats.MsgHandler) (*nats.Subscription, error)
+	SubscribeSync(subj string) (*nats.Subscription, error)
 }
 
 type messagingAdapter struct {
@@ -36,6 +37,15 @@ func (a *messagingAdapter) PublishMessage(ctx context.Context, topic string, dat
 
 func (a *messagingAdapter) Subscribe(subj string, cb nats.MsgHandler) (*nats.Subscription, error) {
 	sub, err := a.nats.Subscribe(subj, cb)
+	if err != nil {
+		return nil, errors.New("failed to subscribe to subject: " + err.Error())
+	}
+
+	return sub, nil
+}
+
+func (a *messagingAdapter) SubscribeSync(subj string) (*nats.Subscription, error) {
+	sub, err := a.nats.SubscribeSync(subj)
 	if err != nil {
 		return nil, errors.New("failed to subscribe to subject: " + err.Error())
 	}
