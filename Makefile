@@ -33,6 +33,9 @@ start-user-svc:
 start-room-svc:
 	cd services/room-svc/cmd/web && go run main.go
 
+start-chat-query-svc:
+	cd services/chat-query-svc/cmd/web && go run main.go
+
 start-chat-realtime-svc:
 	cd services/chat-realtime-svc/cmd/web && go run main.go
 
@@ -41,9 +44,6 @@ start-chat-ingestion-svc:
 
 start-chat-command-cql-svc:
 	cd services/chat-command-cql-svc/cmd/worker && go run main.go
-
-start-chat-query-svc:
-	cd services/chat-query-svc/cmd/web && go run main.go
 
 start-chat-command-elastic-svc:
 	cd services/chat-command-elastic-svc/cmd/worker && go run main.go

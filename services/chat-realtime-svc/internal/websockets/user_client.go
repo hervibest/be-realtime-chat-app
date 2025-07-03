@@ -6,7 +6,9 @@ import (
 	"be-realtime-chat-app/services/commoner/constant/enum"
 	"be-realtime-chat-app/services/commoner/logs"
 	"context"
+	"errors"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -26,6 +28,31 @@ type UserClient struct {
 	RoomID       string `json:"room_id"`
 	Email        string `json:"email"`
 	Username     string `json:"username"`
+	writeMu      sync.Mutex
+	closed       bool // Flag untuk menandai koneksi sudah ditutup
+}
+
+// SafeWriteJSON safely writes JSON to the WebSocket connection
+func (c *UserClient) SafeWriteJSON(v interface{}) error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
+	if c.closed {
+		return errors.New("connection closed")
+	}
+	return c.Conn.WriteJSON(v)
+}
+
+// SafeClose safely closes the WebSocket connection
+func (c *UserClient) SafeClose() error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+
+	if c.closed {
+		return nil
+	}
+	c.closed = true
+	return c.Conn.Close()
 }
 
 func (c *UserClient) Subscriber(done chan struct{}) {
@@ -43,21 +70,20 @@ func (c *UserClient) Subscriber(done chan struct{}) {
 		c.Log.Error("Error when get ten latest message form query svc", zap.Error(err))
 	}
 
-	if len(latestMessagesPb.Message) != 0 {
+	if len(latestMessagesPb.Message) != 0 && latestMessagesPb.Message != nil {
 		for _, msg := range latestMessagesPb.Message {
 			event := &event.Message{
-				ID: msg.GetId(),
-				// UUID:       msg.Get(),
-				RoomID: msg.GetRoomId(),
-				// RoomStatus: msg.String(),
+				ID:        msg.GetId(),
+				RoomID:    msg.GetRoomId(),
 				UserID:    msg.GetUserId(),
 				Username:  msg.GetUsername(),
 				Content:   msg.GetContent(),
-				CreatedAt: msg.String(),
+				CreatedAt: msg.GetCreatedAt(),
 			}
 
-			if err := c.Conn.WriteJSON(event); err != nil {
-				log.Println("Failed to send close message:", err)
+			if err := c.SafeWriteJSON(event); err != nil { // Gunakan SafeWriteJSON di sini
+				log.Println("Failed to send message:", err)
+				return
 			}
 		}
 	}
@@ -68,11 +94,10 @@ func (c *UserClient) Subscriber(done chan struct{}) {
 			c.Log.Info("Exiting subscriber loop due to WebSocket close")
 			return
 		default:
-			// Tunggu pesan NATS dengan timeout
-			msg, err := sub.NextMsg(10 * time.Second)
+			msg, err := sub.NextMsg(2 * time.Second)
 			if err != nil {
 				if err == nats.ErrTimeout {
-					continue // tidak ada pesan, ulangi
+					continue
 				}
 				log.Println("Error receiving message from NATS:", err)
 				return
@@ -84,27 +109,31 @@ func (c *UserClient) Subscriber(done chan struct{}) {
 				continue
 			}
 
-			c.Log.Info("Received & parsed message", zap.String("eventID", event.ID), zap.String("roomID", event.RoomID), zap.String("userID", event.UserID), zap.String("content", event.Content))
+			c.Log.Info("Received & parsed message",
+				zap.String("eventID", event.ID),
+				zap.String("roomID", event.RoomID),
+				zap.String("userID", event.UserID),
+				zap.String("content", event.Content))
 
 			if event.RoomStatus == enum.RoomStatusEnumClosed {
 				closeMsg := map[string]string{
 					"type":    "room_deleted",
 					"message": "Room has been deleted",
 				}
-				if err := c.Conn.WriteJSON(closeMsg); err != nil {
+				if err := c.SafeWriteJSON(closeMsg); err != nil {
 					log.Println("Failed to send close message:", err)
 				}
-				c.Conn.Close()
+				c.SafeClose() // Gunakan SafeClose di sini
 				return
 			}
 
-			if err := c.Conn.WriteJSON(event); err != nil {
+			if err := c.SafeWriteJSON(event); err != nil {
 				log.Println("WriteMessage error:", err)
+				return
 			}
 		}
 	}
 }
-
 func (c *UserClient) Publisher(done chan struct{}) error {
 	defer func() {
 		_ = c.Conn.Close()

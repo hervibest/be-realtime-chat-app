@@ -124,5 +124,8 @@ func main() {
 	defer stop()
 
 	if err := webServer(ctx); err != nil {
+		fmt.Printf("Error starting web server: %v\n", err)
+		stop()
+		return
 	}
 }

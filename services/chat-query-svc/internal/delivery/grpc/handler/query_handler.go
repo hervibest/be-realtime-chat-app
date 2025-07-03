@@ -31,7 +31,15 @@ func (h *QueryGRPCHandler) GetTenLatestMessage(ctx context.Context, req *querypb
 		}
 	}
 
+	if response == nil {
+		return &querypb.GetTenLatestMessageResponse{
+			Status:  int64(codes.OK),
+			Message: nil,
+		}, nil
+	}
+
 	messagePbs := make([]*querypb.Message, len(*response))
+
 	for i, message := range *response {
 		messagePbs[i] = &querypb.Message{
 			Id:        message.ID,
