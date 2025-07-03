@@ -36,17 +36,17 @@ func (c *userControlerImpl) LoginUser(ctx *fiber.Ctx) error {
 		return helper.ErrBodyParserResponseJSON(ctx, err)
 	}
 
-	employee, token, err := c.userUC.LoginUser(ctx.UserContext(), request)
+	user, token, err := c.userUC.LoginUser(ctx.UserContext(), request)
 	if err != nil {
 		if validatonErrs, ok := err.(*helper.UseCaseValError); ok {
 			return helper.ErrValidationResponseJSON(ctx, validatonErrs)
 		}
-		return helper.ErrUseCaseResponseJSON(ctx, "Login employee error : ", err, c.logs)
+		return helper.ErrUseCaseResponseJSON(ctx, "Login user error : ", err, c.logs)
 	}
 
 	response := map[string]interface{}{
-		"employee": employee,
-		"token":    token,
+		"user":  user,
+		"token": token,
 	}
 
 	return ctx.Status(http.StatusOK).JSON(model.WebResponse[any]{
@@ -69,7 +69,7 @@ func (c *userControlerImpl) RegisterUser(ctx *fiber.Ctx) error {
 	request.CreatedBy = uuid.Must(uuid.NewRandom())
 	request.UpdatedBy = request.CreatedBy
 
-	employee, err := c.userUC.RegisterUser(ctx.UserContext(), request)
+	user, err := c.userUC.RegisterUser(ctx.UserContext(), request)
 	if err != nil {
 		if validatonErrs, ok := err.(*helper.UseCaseValError); ok {
 			return helper.ErrValidationResponseJSON(ctx, validatonErrs)
@@ -78,7 +78,7 @@ func (c *userControlerImpl) RegisterUser(ctx *fiber.Ctx) error {
 	}
 
 	response := map[string]interface{}{
-		"employee": employee,
+		"user": user,
 	}
 
 	return ctx.Status(http.StatusOK).JSON(model.WebResponse[any]{
@@ -88,16 +88,16 @@ func (c *userControlerImpl) RegisterUser(ctx *fiber.Ctx) error {
 }
 
 func (c *userControlerImpl) CurrentUser(ctx *fiber.Ctx) error {
-	employee := middleware.GetUser(ctx)
+	user := middleware.GetUser(ctx)
 
-	employeeResponse, err := c.userUC.CurrentUser(ctx.Context(), employee.Username)
+	userResponse, err := c.userUC.CurrentUser(ctx.Context(), user.Username)
 	if err != nil {
 		return helper.ErrUseCaseResponseJSON(ctx, "Current error : ", err, c.logs)
 	}
 
 	return ctx.Status(http.StatusOK).JSON(model.WebResponse[*model.UserResponse]{
 		Success: true,
-		Data:    employeeResponse,
+		Data:    userResponse,
 	})
 }
 

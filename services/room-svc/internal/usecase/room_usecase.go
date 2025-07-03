@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"be-realtime-chat-app/services/commoner/constant/enum"
 	errorcode "be-realtime-chat-app/services/commoner/constant/errcode"
 	"be-realtime-chat-app/services/commoner/constant/message"
 	"be-realtime-chat-app/services/commoner/helper"
@@ -9,6 +10,7 @@ import (
 	"be-realtime-chat-app/services/room-svc/internal/helper/logs"
 	"be-realtime-chat-app/services/room-svc/internal/model"
 	"be-realtime-chat-app/services/room-svc/internal/model/converter"
+	"be-realtime-chat-app/services/room-svc/internal/model/event"
 	"be-realtime-chat-app/services/room-svc/internal/repository"
 	"context"
 	"errors"
@@ -17,6 +19,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/oklog/ulid/v2"
 	"github.com/redis/go-redis/v9"
@@ -88,9 +91,12 @@ func (uc *roomUseCaseImpl) UserDeleteRoom(ctx context.Context, request *model.Us
 		return validatonErrs
 	}
 
-	if err := repository.BeginTxx(ctx, uc.db, func(tx repository.TX) error {
+	var room *entity.Room
+	var err error
+
+	if err = repository.BeginTxx(ctx, uc.db, func(tx repository.TX) error {
 		uc.log.Info("Deleting room", zap.String("roomUUID", request.RoomUUID), zap.String("roomID", request.UserID))
-		room, err := uc.roomRepository.FindByUUIDAndUserID(context.Background(), uc.db, request.RoomUUID, request.UserID)
+		room, err = uc.roomRepository.FindByUUIDAndUserID(context.Background(), uc.db, request.RoomUUID, request.UserID)
 		if err != nil {
 			if strings.Contains(err.Error(), pgx.ErrNoRows.Error()) {
 				return helper.NewUseCaseError(errorcode.ErrResourceNotFound, message.RoomNotFound)
@@ -105,16 +111,28 @@ func (uc *roomUseCaseImpl) UserDeleteRoom(ctx context.Context, request *model.Us
 			return helper.WrapInternalServerError(uc.log, "failed to delete room by uuid", err)
 		}
 
-		topic := "room." + room.ID
-		initialMessage := []byte("room deleted by " + room.UserID)
-		if err := uc.messaging.PublishMessage(ctx, topic, initialMessage); err != nil {
-			uc.log.Warn("Failed to publish to NATS", zap.String("topic", topic), zap.Error(err))
-			return helper.WrapInternalServerError(uc.log, "failed to publish new room to nats", err)
-		}
 		return nil
 	}); err != nil {
-		uc.log.Warn("Transaction failed", zap.Error(err))
+		uc.log.Error("Transaction failed", zap.Error(err))
 		return helper.WrapInternalServerError(uc.log, "transaction failed", err)
+	}
+
+	topic := "room." + room.ID
+	deleteEvent := &event.Message{
+		ID:         uuid.NewString(),
+		UUID:       room.UUID,
+		RoomID:     room.ID,
+		RoomStatus: enum.RoomStatusEnumClosed,
+		UserID:     room.UserID,
+	}
+
+	if err := uc.messaging.PublishMessage(ctx, topic, deleteEvent); err != nil {
+		uc.log.Error("Failed to publish to NATS", zap.String("topic", topic), zap.Error(err))
+		return helper.WrapInternalServerError(uc.log, "failed to publish new room to nats", err)
+	}
+
+	if err := uc.cacheAdapter.Del(ctx, room.ID); err != nil {
+		uc.log.Warn("Failed to delete room from cache", zap.String("roomID", room.ID), zap.Error(err))
 	}
 
 	return nil
@@ -126,7 +144,8 @@ func (uc *roomUseCaseImpl) CreateRoom(ctx context.Context, request *model.Create
 	}
 
 	response := new(entity.Room)
-	if err := repository.BeginTxx(ctx, uc.db, func(tx repository.TX) error {
+	var err error
+	if err = repository.BeginTxx(ctx, uc.db, func(tx repository.TX) error {
 		uc.log.Info("Create room request")
 		room := &entity.Room{
 			ID:     ulid.Make().String(),
@@ -139,19 +158,19 @@ func (uc *roomUseCaseImpl) CreateRoom(ctx context.Context, request *model.Create
 			uc.log.Warn("Failed to create room", zap.Error(err))
 			return helper.WrapInternalServerError(uc.log, "failed to insert new room", err)
 		}
-
 		response = txRoom
-		topic := "room." + room.ID
-		initialMessage := []byte("room created by " + room.UserID)
-		if err := uc.messaging.PublishMessage(ctx, topic, initialMessage); err != nil {
-			uc.log.Warn("Failed to publish to NATS", zap.String("topic", topic), zap.Error(err))
-			return helper.WrapInternalServerError(uc.log, "failed to publish new room to nats", err)
-		}
 
 		return nil
 	}); err != nil {
 		uc.log.Warn("Transaction failed", zap.Error(err))
 		return nil, helper.WrapInternalServerError(uc.log, "transaction failed", err)
+	}
+
+	topic := "room." + response.ID
+	initialMessage := []byte("room created by " + response.UserID)
+	if err := uc.messaging.PublishMessage(ctx, topic, initialMessage); err != nil {
+		uc.log.Warn("Failed to publish to NATS", zap.String("topic", topic), zap.Error(err))
+		return nil, helper.WrapInternalServerError(uc.log, "failed to publish new room to nats", err)
 	}
 
 	return converter.RoomToResponse(response), nil

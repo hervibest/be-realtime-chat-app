@@ -38,7 +38,10 @@ func webServer(ctx context.Context) error {
 	logger, _ := logs.NewLogger()
 
 	cqlClient, err := config.NewCQL()
-	elasticsearchClient, err := config.NewElasticsearch()
+	if err != nil {
+		logger.Error("failed to check go cql session", zap.Error(err))
+	}
+	// elasticsearchClient, err := config.NewElasticsearch()
 
 	customValidator := helper.NewCustomValidator()
 
@@ -82,9 +85,9 @@ func webServer(ctx context.Context) error {
 	go consul.StartHealthCheckLoop(ctx, registry, GRPCserviceID, serverConfig.QuerySvcName+"-grpc", logger)
 
 	messageCQLRepo := repository.NewMessageCQLRepository(cqlClient)
-	messageElasticRepo := repository.NewMessageElasticRepo(elasticsearchClient)
+	// messageElasticRepo := repository.NewMessageElasticRepo(elasticsearchClient)
 
-	queryUC := usecase.NewQueryUseCase(messageCQLRepo, messageElasticRepo, roomAdapter, customValidator, logger)
+	queryUC := usecase.NewQueryUseCase(messageCQLRepo, nil, roomAdapter, customValidator, logger)
 
 	queryController := controller.NewQueryController(queryUC, logger)
 

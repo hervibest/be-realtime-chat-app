@@ -49,10 +49,8 @@ func BeginTxx(ctx context.Context, db DB, fn func(tx TX) error) error {
 	}
 
 	defer func() {
-		if err != nil {
-			log.Default().Print("Transaction failed, rolling back")
-			_ = tx.Rollback(ctx)
-		}
+		log.Default().Print("Transaction failed, rolling back")
+		_ = tx.Rollback(ctx)
 	}()
 
 	if err = fn(tx); err != nil {

@@ -33,10 +33,13 @@ func (r *roomRepositoryImpl) Insert(ctx context.Context, db Querier, room *entit
 	INSERT INTO rooms
 		(id, name, user_id)
 	VALUES
-		($1, $2, $3)`
+		($1, $2, $3)
+	RETURNING 
+		uuid, 
+		created_at
+	`
 
-	_, err := db.Exec(ctx, query, room.ID, room.Name, room.UserID)
-	if err != nil {
+	if err := pgxscan.Get(ctx, db, room, query, room.ID, room.Name, room.UserID); err != nil {
 		r.log.Error("failed to exec insert query", zap.String("query", query), zap.Error(err))
 		return nil, err
 	}
@@ -74,7 +77,7 @@ func (r *roomRepositoryImpl) FindByUUIDAndUserID(ctx context.Context, db Querier
 }
 
 func (r *roomRepositoryImpl) DeleteByUUID(ctx context.Context, db Querier, uuid string) error {
-	query := `UPDATE rooms SET deleted_at = now() WHERE uuid = $1 AND deleted_at IS NOT NULL`
+	query := `UPDATE rooms SET deleted_at = now() WHERE uuid = $1 AND deleted_at IS NULL`
 	row, err := db.Exec(ctx, query, uuid)
 	if err != nil {
 		r.log.Error("failed to exec delete query", zap.String("query", query), zap.Error(err))
