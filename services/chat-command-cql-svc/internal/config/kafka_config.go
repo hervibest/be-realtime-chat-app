@@ -10,9 +10,10 @@ import (
 
 func NewKafkaConsumer(log logs.Log) *kafka.Consumer {
 	kafkaConfig := &kafka.ConfigMap{
-		"bootstrap.servers": utils.GetEnv("KAFKA_BOOTSTRAP_SERVERS"),
-		"group.id":          utils.GetEnv("KAFKA_GROUP_ID"),
-		"auto.offset.reset": utils.GetEnv("KAFKA_AUTO_OFFSET_RESET"),
+		"bootstrap.servers":     utils.GetEnv("KAFKA_BOOTSTRAP_SERVERS"),
+		"group.id":              utils.GetEnv("KAFKA_GROUP_ID"),
+		"auto.offset.reset":     utils.GetEnv("KAFKA_AUTO_OFFSET_RESET"),
+		"broker.address.family": utils.GetEnv("BROKER_ADDRESS_FAMILY"),
 	}
 
 	consumer, err := kafka.NewConsumer(kafkaConfig)
