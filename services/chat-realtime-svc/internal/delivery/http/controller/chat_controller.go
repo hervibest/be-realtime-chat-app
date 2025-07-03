@@ -55,7 +55,13 @@ func (c *roomControllerImpl) JoinRoom(ctx *fiber.Ctx) error {
 				if appErr, ok := err.(*helper.AppError); ok {
 					c.log.Info(appErr.Message)
 				}
-				return
+				conn.WriteJSON(map[string]string{
+					"type":    "error",
+					"message": err.Error(),
+				})
+				// Kirim frame Close agar client dapat alasan
+				conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "room not found"))
+				conn.Close()
 			}
 		})(ctx)
 	}

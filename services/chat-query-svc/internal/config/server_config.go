@@ -3,8 +3,6 @@ package config
 import (
 	"be-realtime-chat-app/services/commoner/utils"
 	"fmt"
-	"net"
-	"os"
 )
 
 type ServerConfig struct {
@@ -20,16 +18,16 @@ type ServerConfig struct {
 }
 
 func NewServerConfig() *ServerConfig {
-	hostname, _ := os.Hostname()
-	addrs, _ := net.LookupIP(hostname)
+	// hostname, _ := os.Hostname()
+	// addrs, _ := net.LookupIP(hostname)
 
-	var ip string
-	for _, addr := range addrs {
-		if ipv4 := addr.To4(); ipv4 != nil && !ipv4.IsLoopback() {
-			ip = ipv4.String()
-			break
-		}
-	}
+	// var ip string
+	// for _, addr := range addrs {
+	// 	if ipv4 := addr.To4(); ipv4 != nil && !ipv4.IsLoopback() {
+	// 		ip = ipv4.String()
+	// 		break
+	// 	}
+	// }
 
 	consulAddr := fmt.Sprintf("%s:%s", utils.GetEnv("CONSUL_HOST"), utils.GetEnv("CONSUL_PORT"))
 
@@ -40,7 +38,7 @@ func NewServerConfig() *ServerConfig {
 
 		QueryGRPCAddr:         utils.GetEnv("QUERY_GRPC_ADDR"),
 		QueryGRPCPort:         utils.GetEnv("QUERY_GRPC_PORT"),
-		QueryGRPCInternalAddr: ip,
+		QueryGRPCInternalAddr: utils.GetEnv("QUERY_GRPC_ADDR"),
 
 		ConsulAddr: consulAddr,
 	}

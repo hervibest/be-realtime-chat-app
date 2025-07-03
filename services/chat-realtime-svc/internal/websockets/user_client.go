@@ -52,6 +52,10 @@ func (c *UserClient) SafeClose() error {
 		return nil
 	}
 	c.closed = true
+	c.Log.Info("Closing WebSocket connection", zap.String("roomID", c.RoomID), zap.String("userID", c.UserID))
+	// Send close message to client (optional but proper)
+	_ = c.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "room closed"))
+
 	return c.Conn.Close()
 }
 
@@ -116,6 +120,7 @@ func (c *UserClient) Subscriber(done chan struct{}) {
 				zap.String("content", event.Content))
 
 			if event.RoomStatus == enum.RoomStatusEnumClosed {
+				c.Log.Info("Room has been closed", zap.String("roomID", event.RoomID), zap.String("userID", event.UserID))
 				closeMsg := map[string]string{
 					"type":    "room_deleted",
 					"message": "Room has been deleted",
@@ -123,7 +128,8 @@ func (c *UserClient) Subscriber(done chan struct{}) {
 				if err := c.SafeWriteJSON(closeMsg); err != nil {
 					log.Println("Failed to send close message:", err)
 				}
-				c.SafeClose() // Gunakan SafeClose di sini
+				c.SafeClose()
+				log.Println("WebSocket connection closed for room:", event.RoomID, "user:", event.UserID)
 				return
 			}
 
